@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aunty Ranking | Live Judging</title>
+    <title>Aunty Ranking</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root { --bg: #fdf6e3; --accent: #ffd700; --text: #2b2b2b; --border: #000; --red: #d32f2f; }
         body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 20px; }
         
+        /* Neubrutalist Components */
         .brutalist-card { 
             background: white; border: 4px solid var(--border); padding: 1.5rem; 
             box-shadow: 8px 8px 0px var(--border); margin-bottom: 25px;
@@ -22,13 +23,13 @@
         .btn:active { transform: translate(2px, 2px); box-shadow: 0px 0px 0px var(--border); }
         .btn-back { background: #fff; margin-bottom: 20px; }
 
+        /* Navigation Logic */
         .page { display: none; max-width: 800px; margin: 0 auto; }
         .page.active { display: block; }
 
-        .flex-row { display: flex; justify-content: space-between; align-items: center; gap: 15px; }
+        .flex-row { display: flex; justify-content: space-between; align-items: center; }
         .tag { background: var(--red); color: white; padding: 4px 8px; font-weight: bold; font-size: 0.8rem; text-transform: uppercase; }
-        
-        #loading { text-align: center; font-weight: bold; padding: 20px; }
+        #loading-text { text-align: center; font-weight: bold; margin-bottom: 10px; }
     </style>
 </head>
 <body>
@@ -50,16 +51,16 @@
         <div class="brutalist-card flex-row">
             <div>
                 <h3>💼 Career Paths</h3>
-                <p>Doctor, Engineer, or "Social Media Influencer"</p>
+                <p>Doctor, Engineer, or ""</p>
             </div>
-            <button class="btn" disabled style="opacity: 0.5; cursor: not-allowed;">LOCKED</button>
+            <button class="btn">LOCKED</button>
         </div>
     </div>
 
     <div id="uni-page" class="page">
         <button class="btn btn-back" onclick="showPage('home-page')">← BACK TO HOME</button>
         <h2>University Leaderboard</h2>
-        <div id="loading">Checking with the neighborhood aunties...</div>
+        <div id="loading-text" style="display:none;">Asking the neighborhood aunties...</div>
         <div id="uni-list"></div>
     </div>
 
@@ -67,22 +68,40 @@
         // --- CONFIGURATION ---
         const SUPABASE_URL = https://spyihezjhbfewcelenhn.supabase.co ; 
         const SUPABASE_KEY = sb_publishable_tWIdyqh4YRWRhomWt9MqKw_iu9_iy3m;
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // --- NAVIGATION ---
+        // --- DATA (Restored exactly as you had it) ---
+        const localFallbackData = [
+            { id: 1, name:"Bangladesh University of Engineering & Technology ", label: "PUBLIC", desc: "আমার ছেলে BUET-এ পড়ে.", votes: 1500 },
+            { id: 2, name:"Dhaka Medical College ", label: "PUBLIC", desc: "ঢাকা মেডিকেল, সরকারি ডাক্তার হবে!.", votes: 420 },
+            { id: 3, name:"Dhaka University", label: "PUBLIC", desc: "আগে chance পেয়ে দেখা", votes: 100 },
+            { id: 4, name:"Shahid Sahrawardy Medical College", label: "PUBLIC", desc: "মেডিকেল......ওসব নাম ধরে লাভ কি, ডাক্তার হলেই হলো।", votes: -85 },
+            { id: 5, name:"Khulna University of Engineering & Technology", label: "PUBLIC", desc: "BUET এ হয় নাই, না?'", votes: -85 },
+            { id: 6, name:"Jahangirnagar University", label: "PUBLIC", desc: "চাকরি পাবা  তো বাবা?", votes: -85 },
+            { id: 7, name:"BRAC", label: "PRIVATE", desc: "আসলে ও একটু আলাদা তো, ও আবার আবার IELTS ও দিচ্ছে", votes: -85 },
+            { id: 8, name:"IBA", label: "PUBLIC+PRIVATE", desc: "এইটা কি Private না, ভাবি?", votes: -85 },
+            { id: 9, name:"North South University", label: "NOSHTO", desc: "Public এ হয় নাই, না?", votes: -85 },
+            { id: 10,name:"AIUB", label: "IUB?", desc: "এইটা আবার কি?", votes: -85 },
+            { id: 11,name:"IUB", label: "AIUB?", desc: "North South এর পাশের University", votes: -85 },
+            { id: 12,name:"MIST", label: "PUBLIC?", desc: "আর্মির আন্ডারেই'", votes: -85 },
+            { id: 13,name:"Armed Forces Medical College", label: "ARMY DADDY", desc: "", votes: -85 },
+            { id: 14,name:"BUP", label: "PRIVATE?", desc: "না, মানে… পড়াশোনা করে। কিন্তু খুব ডিসিপ্লিন।", votes: -85 },
+            { id: 15,name:"7 College", label: "KASHEMPUR", desc: "........................", votes: -85 }
+        ];
+
         function showPage(pageId) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.getElementById(pageId).classList.add('active');
             if(pageId === 'uni-page') fetchRankings();
         }
 
-        // --- CORE LOGIC ---
         async function fetchRankings() {
             const list = document.getElementById('uni-list');
-            const loader = document.getElementById('loading');
+            const loader = document.getElementById('loading-text');
             loader.style.display = 'block';
-
-            let { data: rankings, error } = await supabase
+            
+            // Fetch live votes from Supabase
+            const { data, error } = await supabaseClient
                 .from('rankings')
                 .select('*')
                 .order('votes', { ascending: false });
@@ -90,22 +109,30 @@
             loader.style.display = 'none';
 
             if (error) {
-                list.innerHTML = `<p>Error: ${error.message}</p>`;
+                console.warn('Supabase not connected yet, using local data.');
+                renderUnis(localFallbackData);
                 return;
             }
 
+            renderUnis(data);
+        }
+
+        function renderUnis(uniData) {
+            const list = document.getElementById('uni-list');
             list.innerHTML = '';
-            rankings.forEach(u => {
+            
+            // Sort data by votes descending
+            uniData.sort((a, b) => b.votes - a.votes).forEach(u => {
                 const card = document.createElement('div');
                 card.className = 'brutalist-card flex-row';
                 card.innerHTML = `
                     <div>
                         <span class="tag">${u.label}</span>
                         <h3>${u.name}</h3>
-                        <p>${u.description}</p>
+                        <p>${u.desc || u.description}</p>
                     </div>
-                    <div style="text-align:center; min-width: 80px;">
-                        <div style="font-size:1.5rem; font-weight:900" id="v-${u.id}">${u.votes}</div>
+                    <div style="text-align:center">
+                        <div style="font-size:1.5rem; font-weight:900">${u.votes}</div>
                         <button class="btn" onclick="vote(${u.id})">JUDGE</button>
                     </div>
                 `;
@@ -114,13 +141,11 @@
         }
 
         async function vote(id) {
-            // Call the SQL function we created to increment the vote
-            const { error } = await supabase.rpc('increment_vote', { row_id: id });
-            
+            const { error } = await supabaseClient.rpc('increment_vote', { row_id: id });
             if (error) {
-                alert("Aunty is busy! (Error voting)");
+                alert("Please make sure you've set up the SQL function in Supabase!");
             } else {
-                fetchRankings(); // Refresh the list
+                fetchRankings();
             }
         }
     </script>
