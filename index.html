@@ -66,8 +66,9 @@
 
     <script>
         // --- CONFIGURATION ---
-        const SUPABASE_URL = https://spyihezjhbfewcelenhn.supabase.co ; 
-        const SUPABASE_KEY = sb_publishable_tWIdyqh4YRWRhomWt9MqKw_iu9_iy3m;
+        // FIXED: Added quotes around the URL and Key
+        const SUPABASE_URL = 'https://spyihezjhbfewcelenhn.supabase.co'; 
+        const SUPABASE_KEY = 'sb_publishable_tWIdyqh4YRWRhomWt9MqKw_iu9_iy3m';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         // --- DATA (Restored exactly as you had it) ---
@@ -100,21 +101,24 @@
             const loader = document.getElementById('loading-text');
             loader.style.display = 'block';
             
-            // Fetch live votes from Supabase
-            const { data, error } = await supabaseClient
-                .from('rankings')
-                .select('*')
-                .order('votes', { ascending: false });
+            try {
+                const { data, error } = await supabaseClient
+                    .from('rankings')
+                    .select('*')
+                    .order('votes', { ascending: false });
 
-            loader.style.display = 'none';
+                loader.style.display = 'none';
 
-            if (error) {
-                console.warn('Supabase not connected yet, using local data.');
+                if (error) {
+                    console.warn('Supabase error, using local data:', error.message);
+                    renderUnis(localFallbackData);
+                } else {
+                    renderUnis(data);
+                }
+            } catch (err) {
+                console.error('Fetch failed:', err);
                 renderUnis(localFallbackData);
-                return;
             }
-
-            renderUnis(data);
         }
 
         function renderUnis(uniData) {
@@ -143,7 +147,8 @@
         async function vote(id) {
             const { error } = await supabaseClient.rpc('increment_vote', { row_id: id });
             if (error) {
-                alert("Please make sure you've set up the SQL function in Supabase!");
+                console.error("Vote error:", error);
+                alert("Please make sure you've enabled RLS and set up the SQL function in Supabase!");
             } else {
                 fetchRankings();
             }
